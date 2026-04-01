@@ -1,19 +1,17 @@
 @import "tailwindcss";
 
-:root {
-  --background: #fff8f4;
-  --foreground: #2d1d21;
-  --body-font:
-    "Aptos", "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  --display-font:
-    "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
-}
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--body-font);
   --font-display: var(--display-font);
+}
+
+:root {
+  --background: #fff8f4;
+  --foreground: #2d1d21;
+  --body-font: "Inter", "Aptos", sans-serif;
+  --display-font: "Outfit", "Iowan Old Style", serif;
 }
 
 * {
@@ -26,22 +24,62 @@ html {
 
 body {
   background:
-    radial-gradient(circle at 12% 8%, rgba(242, 186, 195, 0.36), transparent 24%),
-    radial-gradient(circle at 88% 10%, rgba(255, 216, 202, 0.38), transparent 28%),
-    radial-gradient(circle at 18% 72%, rgba(249, 222, 208, 0.28), transparent 20%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0) 100%),
+    radial-gradient(circle at 12% 8%, rgba(242, 186, 195, 0.42), transparent 28%),
+    radial-gradient(circle at 88% 10%, rgba(255, 216, 202, 0.45), transparent 32%),
+    radial-gradient(circle at 18% 72%, rgba(249, 222, 208, 0.35), transparent 25%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 100%),
     linear-gradient(180deg, #fffdfa 0%, #fff7f2 44%, #fff8f5 100%);
   color: var(--foreground);
   font-family: var(--body-font);
   min-height: 100vh;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+.glass-card {
+  @apply rounded-[2rem] border border-white/40 bg-white/70 backdrop-blur-md shadow-[0_32px_80px_-48px_rgba(124,76,88,0.35)];
 }
 
-::selection {
-  background: rgba(215, 134, 151, 0.28);
-  color: var(--foreground);
+.glass-pill {
+  @apply rounded-full border border-white/50 bg-white/40 backdrop-blur-sm shadow-[0_8px_32px_-12px_rgba(124,76,88,0.2)];
+}
+
+.glass-input {
+  @apply rounded-2xl border border-[#e9cfd1] bg-white/60 px-4 py-3 text-base text-[#2d1d21] outline-none transition-all duration-300 focus:border-[#b86f7c] focus:ring-4 focus:ring-[#f2cfd4]/30 focus:bg-white;
+}
+
+.premium-button {
+  @apply inline-flex min-h-12 items-center justify-center rounded-full bg-[#2d1d21] px-6 text-sm font-bold text-white shadow-[0_20px_48px_-24px_rgba(45,29,33,0.6)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_54px_-20px_rgba(45,29,33,0.7)] active:scale-95;
+}
+
+.premium-button-outline {
+  @apply inline-flex min-h-12 items-center justify-center rounded-full border border-[#e2bec4] bg-white/50 px-6 text-sm font-bold text-[#2d1d21] transition-all duration-300 hover:bg-white hover:-translate-y-1 hover:shadow-[0_20px_48px_-24px_rgba(124,76,88,0.25)] active:scale-95;
+}
+
+@keyframes product-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.product-marquee-track {
+  display: flex;
+  gap: 1rem;
+  width: max-content;
+  animation: product-marquee 32s linear infinite;
+  will-change: transform;
+}
+
+.product-marquee-track-reverse {
+  animation-direction: reverse;
+}
+
+.product-marquee-card {
+  flex: 0 0 16rem;
+}
+
+.product-marquee-track:hover {
+  animation-play-state: paused;
 }

@@ -25,9 +25,11 @@ export type CategoryItem = {
 };
 
 export type SlideItem = {
+  id?: string;
   title: string;
   tag: string;
   image: string;
+  url?: string;
 };
 
 export type StepItem = {
@@ -149,41 +151,49 @@ export const defaultSiteContent: SiteContent = {
       title: "Sweet everyday dress",
       tag: "Dresses",
       image: "/img/657576098_1376495067834290_9163013850703279435_n.jpg",
+      url: "",
     },
     {
       title: "Cute daily top",
       tag: "Tops",
       image: "/img/657948139_1376493581167772_4042167179065393927_n.jpg",
+      url: "",
     },
     {
       title: "Easy wear bottoms",
       tag: "Pants",
       image: "/img/658125919_1376494814500982_8282276342450375921_n.jpg",
+      url: "",
     },
     {
       title: "Layer-ready jacket",
       tag: "Jackets",
       image: "/img/658132576_1376495107834286_7444600315804004551_n.jpg",
+      url: "",
     },
     {
       title: "Sulit bundle picks",
       tag: "Bundles",
       image: "/img/658830157_1376495631167567_5484416353753710479_n.jpg",
+      url: "",
     },
     {
       title: "Fresh drop favorite",
       tag: "Featured",
       image: "/img/658964028_1376494084501055_3485864027219705420_n.jpg",
+      url: "",
     },
     {
       title: "Prettiest neutral set",
       tag: "Trending",
       image: "/img/659250304_1376495377834259_8687871249592187237_n.jpg",
+      url: "",
     },
     {
       title: "New arrival steal",
       tag: "New Drop",
       image: "/img/661444226_1376494911167639_5021627411567300326_n.jpg",
+      url: "",
     },
   ],
   categories: [
@@ -317,7 +327,7 @@ export function loadSiteContent(): SiteContent {
         stats: parsed.hero?.stats ?? cloneSiteContent(defaultSiteContent).hero.stats,
       },
       features: parsed.features ?? cloneSiteContent(defaultSiteContent).features,
-      slides: parsed.slides ?? cloneSiteContent(defaultSiteContent).slides,
+      slides: cloneSiteContent(defaultSiteContent).slides,
       categories:
         parsed.categories ?? cloneSiteContent(defaultSiteContent).categories,
       steps: parsed.steps ?? cloneSiteContent(defaultSiteContent).steps,
@@ -341,9 +351,14 @@ export function loadSiteContent(): SiteContent {
 export function saveSiteContent(content: SiteContent) {
   if (typeof window === "undefined") return;
 
+  const localContent = {
+    ...content,
+    slides: [],
+  };
+
   window.localStorage.setItem(
     SITE_CONTENT_STORAGE_KEY,
-    JSON.stringify(content),
+    JSON.stringify(localContent),
   );
   window.dispatchEvent(new Event(SITE_CONTENT_EVENT));
 }

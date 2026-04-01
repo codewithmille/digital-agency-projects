@@ -10,7 +10,7 @@ import {
   SITE_CONTENT_EVENT,
   cloneSiteContent,
   loadSiteContent,
-  type FeatureItem,
+  type SlideItem,
   type SiteContent,
 } from "@/app/lib/site-content";
 
@@ -32,30 +32,35 @@ const darkButtonTextStyle = {
   WebkitTextFillColor: "#2d1d21",
 } as const;
 
-const featureIcons: Record<FeatureItem["icon"], typeof TagIcon> = {
-  tag: TagIcon,
-  sparkles: SparklesIcon,
-  stack: StackIcon,
-  chat: ChatIcon,
-};
+const PRODUCTS_PER_BATCH = 6;
 
-export default function HomeClient() {
+export default function HomeClient({
+  initialSlides,
+}: {
+  initialSlides: SlideItem[];
+}) {
   const rootRef = useRef<HTMLElement | null>(null);
   const slideRef = useRef<HTMLDivElement | null>(null);
   const [content, setContent] = useState<SiteContent>(() => cloneSiteContent());
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const [slides, setSlides] = useState<SlideItem[]>(() =>
+    initialSlides.length > 0 ? initialSlides : cloneSiteContent().slides,
+  );
+  const [currentBatch, setCurrentBatch] = useState(0);
 
   const fallbackContent = cloneSiteContent();
-  const slides = content.slides.length > 0 ? content.slides : fallbackContent.slides;
-  const safeCurrentSlide = slides.length
-    ? Math.min(currentSlide, slides.length - 1)
+  const activeSlides = slides.length > 0 ? slides : fallbackContent.slides;
+  const slidePages = chunkSlides(activeSlides, PRODUCTS_PER_BATCH);
+  const safeCurrentBatch = slidePages.length
+    ? Math.min(currentBatch, slidePages.length - 1)
     : 0;
-  const activeSlide = slides[safeCurrentSlide] ?? slides[0];
+  const activePage = slidePages[safeCurrentBatch] ?? slidePages[0] ?? [];
+  const heroCard = activePage[0] ?? activeSlides[0];
   const brandLogo = content.brand.logoPath || fallbackContent.brand.logoPath;
-  const activeSlideImage =
-    activeSlide.image ||
-    fallbackContent.slides[safeCurrentSlide]?.image ||
-    brandLogo;
+  const activeBatchTitle =
+    heroCard?.title?.trim() || `Owner batch ${safeCurrentBatch + 1}`;
+  const activeBatchTag = heroCard?.tag?.trim() || "New post";
+  const activeBatchUrl = heroCard?.url?.trim() || content.links.facebookUrl;
+  const activeBatchCount = activePage.length;
 
   useEffect(() => {
     const syncContent = () => setContent(loadSiteContent());
@@ -67,6 +72,35 @@ export default function HomeClient() {
     return () => {
       window.removeEventListener("storage", syncContent);
       window.removeEventListener(SITE_CONTENT_EVENT, syncContent);
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function syncSlides() {
+      try {
+        const response = await fetch("/api/posts", {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        if (!response.ok) return;
+
+        const data = (await response.json()) as { slides?: SlideItem[] };
+
+        if (!cancelled && Array.isArray(data.slides) && data.slides.length > 0) {
+          setSlides(data.slides);
+        }
+      } catch {
+        // Keep the server-rendered posts if the API is unavailable.
+      }
+    }
+
+    void syncSlides();
+
+    return () => {
+      cancelled = true;
     };
   }, []);
 
@@ -150,14 +184,14 @@ export default function HomeClient() {
   }, []);
 
   useEffect(() => {
-    if (slides.length <= 1) return;
+    if (slidePages.length <= 1) return;
 
     const interval = window.setInterval(() => {
-      setCurrentSlide((previous) => (previous + 1) % slides.length);
+      setCurrentBatch((previous) => (previous + 1) % slidePages.length);
     }, 3200);
 
     return () => window.clearInterval(interval);
-  }, [slides.length]);
+  }, [slidePages.length]);
 
   useEffect(() => {
     if (!slideRef.current) return;
@@ -174,7 +208,7 @@ export default function HomeClient() {
         ease: "power2.out",
       },
     );
-  }, [currentSlide]);
+  }, [currentBatch]);
 
   return (
     <main ref={rootRef} className="overflow-hidden">
@@ -224,8 +258,8 @@ export default function HomeClient() {
               </div>
             </div>
 
-            <div className="relative mt-6 grid gap-8 lg:grid-cols-[0.92fr_1.08fr] lg:items-start">
-              <div className="max-w-2xl">
+            <div className="relative mt-6 grid gap-8 lg:grid-cols-[0.88fr_1.12fr] lg:items-start">
+              <div className="max-w-xl pt-2">
                 <span
                   data-hero-badge
                   className="inline-flex items-center gap-2 rounded-full border border-[#f2cfd4] bg-white/88 px-4 py-2 text-sm font-semibold text-[#b35c6c] shadow-[0_18px_42px_-28px_rgba(179,92,108,0.35)] backdrop-blur"
@@ -235,13 +269,13 @@ export default function HomeClient() {
                 </span>
                 <h1
                   data-hero-title
-                  className="mt-5 max-w-3xl font-display text-5xl leading-[0.92] tracking-[-0.04em] text-[#2d1d21] sm:text-[5rem] lg:text-[5.15rem]"
+                  className="mt-5 max-w-3xl font-display text-[3.6rem] leading-[0.97] tracking-[-0.05em] text-[#2d1d21] sm:text-[4.15rem] lg:text-[4.45rem]"
                 >
                   {content.hero.title}
                 </h1>
                 <p
                   data-hero-copy
-                  className="mt-4 max-w-xl text-lg leading-8 text-[#5d494d] sm:text-[1.15rem]"
+                  className="mt-5 max-w-lg text-[1.02rem] leading-8 text-[#5d494d] sm:text-[1.08rem]"
                 >
                   {content.hero.description}
                 </p>
@@ -276,11 +310,11 @@ export default function HomeClient() {
                     </span>
                   </a>
                 </div>
-                <div data-hero-pills className="mt-6 flex flex-wrap gap-3">
+                <div data-hero-pills className="mt-6 flex flex-wrap gap-2.5">
                   {content.hero.pills.map((item) => (
                     <span
                       key={item}
-                      className="rounded-full border border-white/80 bg-white/78 px-4 py-2 text-sm font-medium text-[#6c575b] shadow-[0_18px_42px_-30px_rgba(117,78,87,0.34)] backdrop-blur"
+                      className="rounded-full border border-white/85 bg-white/80 px-3.5 py-2 text-[0.82rem] font-medium text-[#6c575b] shadow-[0_16px_34px_-30px_rgba(117,78,87,0.3)] backdrop-blur"
                     >
                       {item}
                     </span>
@@ -288,7 +322,7 @@ export default function HomeClient() {
                 </div>
                 <div
                   data-hero-stats
-                  className="mt-7 grid max-w-xl gap-4 sm:grid-cols-3"
+                  className="mt-7 grid max-w-xl gap-3 sm:grid-cols-3"
                 >
                   {content.hero.stats.map((stat) => (
                     <Stat
@@ -300,156 +334,154 @@ export default function HomeClient() {
                 </div>
               </div>
 
-              <div className="relative mx-auto w-full max-w-[42rem]">
+              <div className="relative mx-auto w-full max-w-[43rem]">
                 <div
                   data-hero-card
-                  className="rounded-[2.4rem] border border-white/75 bg-white/78 p-4 shadow-[0_36px_100px_-46px_rgba(119,76,88,0.56)] backdrop-blur sm:p-5"
+                  className="rounded-[2.4rem] border border-white/75 bg-white/80 p-4 shadow-[0_36px_100px_-46px_rgba(119,76,88,0.52)] backdrop-blur sm:p-5"
                 >
-                  <div className="grid gap-4 sm:grid-cols-[1fr_12rem]">
-                    <div
-                      ref={slideRef}
-                      className="relative min-h-[27rem] overflow-hidden rounded-[2rem]"
-                    >
-                      <Image
-                        key={activeSlide.image}
-                        src={activeSlideImage}
-                        alt={activeSlide.title}
-                        fill
-                        unoptimized
-                        className="object-cover"
-                        sizes="(min-width: 1024px) 28rem, 100vw"
-                      />
-                      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(45,29,33,0.04)_0%,rgba(45,29,33,0.14)_38%,rgba(45,29,33,0.62)_100%)]" />
-                      <div className="absolute left-4 top-4 flex items-center gap-2">
-                        <span className="rounded-full bg-white/90 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-[#9f6470]">
-                          {activeSlide.tag}
-                        </span>
-                        <span className="rounded-full border border-white/45 bg-white/12 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-white backdrop-blur">
-                          Slide {safeCurrentSlide + 1}
-                        </span>
+                  <div className="rounded-[1.9rem] border border-white/75 bg-[linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(255,249,246,0.86)_100%)] p-4 shadow-[0_24px_70px_-42px_rgba(119,76,88,0.28)]">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-full bg-[#f9e0e3] px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#9f6470]">
+                            {activeBatchTag}
+                          </span>
+                          <span className="rounded-full border border-[#ead0d3] bg-white px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#7b6468]">
+                            Batch {safeCurrentBatch + 1}
+                          </span>
+                        </div>
+                        <p className="mt-3 font-display text-[2.35rem] leading-none text-[#2d1d21] sm:text-[2.55rem]">
+                          {activeBatchTitle}
+                        </p>
+                        <p className="mt-3 max-w-md text-sm leading-7 text-[#625054]">
+                          Showing {activeBatchCount} products together in a
+                          cleaner product board, with automatic sliding between
+                          batches.
+                        </p>
                       </div>
-                      <div className="absolute inset-x-4 bottom-4 rounded-[1.6rem] border border-white/30 bg-white/15 p-4 text-white shadow-lg backdrop-blur-md">
-                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/75">
-                          Stacy Thrifts product slideshow
-                        </p>
-                        <p className="mt-2 font-display text-3xl leading-none">
-                          {activeSlide.title}
-                        </p>
-                        <p className="mt-2 text-sm text-white/82">
-                          Browse all posted products in one swipe-style preview
-                          before you message to reserve.
-                        </p>
+                      <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+                        <div className="rounded-[1.2rem] border border-[#ead0d3] bg-white px-4 py-3 text-[#6f5d61] shadow-[0_12px_30px_-26px_rgba(45,29,33,0.28)]">
+                          <p className="text-[0.58rem] font-semibold uppercase tracking-[0.24em] text-[#a36a75]">
+                            All products
+                          </p>
+                          <p className="mt-1 font-display text-[1.85rem] text-[#2d1d21]">
+                            {activeSlides.length}
+                          </p>
+                        </div>
+                        {activeBatchUrl ? (
+                          <a
+                            href={activeBatchUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#2d1d21] px-5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-[#42292f]"
+                            style={whiteButtonTextStyle}
+                          >
+                            <span style={whiteButtonTextStyle}>Open featured link</span>
+                            <ArrowRightIcon
+                              className="h-4 w-4"
+                              style={whiteButtonTextStyle}
+                            />
+                          </a>
+                        ) : null}
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-3">
-                      <div className="rounded-[1.6rem] border border-white/75 bg-white/90 px-4 py-3 text-[#6f5d61] shadow-[0_18px_44px_-32px_rgba(45,29,33,0.28)]">
-                        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-[#a36a75]">
-                          All products
-                        </p>
-                        <p className="mt-2 font-display text-3xl text-[#2d1d21]">
-                          {slides.length}
-                        </p>
-                        <p className="mt-1 text-sm">Auto-playing preview</p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        {slides.map((slide, index) => {
+                    <div
+                      ref={slideRef}
+                      className="mt-4 rounded-[1.9rem] border border-white/80 bg-white/72 p-3"
+                    >
+                      <div className="grid min-h-[26rem] grid-cols-2 gap-3 sm:grid-cols-3">
+                        {activePage.map((slide, index) => {
                           const slideImage =
                             slide.image ||
-                            fallbackContent.slides[index]?.image ||
+                            fallbackContent.slides[index % fallbackContent.slides.length]
+                              ?.image ||
                             brandLogo;
+                          const slideTitle =
+                            slide.title.trim() || `Owner post ${index + 1}`;
+                          const slideUrl =
+                            slide.url?.trim() || content.links.facebookUrl;
+                          const tileClassName =
+                            index === 0 ? "col-span-2 row-span-2 sm:col-span-2" : "";
+                          const isFeaturedTile = index === 0;
 
-                          return (
-                          <button
-                            key={`${slideImage}-${index}`}
-                            type="button"
-                            onClick={() => setCurrentSlide(index)}
-                            className={`relative h-24 overflow-hidden rounded-[1.2rem] border transition-all duration-300 ${
-                              safeCurrentSlide === index
-                                ? "border-[#2d1d21] ring-2 ring-[#2d1d21]/20"
-                                : "border-white/80 hover:border-[#cfa3ab]"
-                            }`}
-                            aria-label={`Show ${slide.title}`}
-                          >
-                            <Image
-                              src={slideImage}
-                              alt={slide.title}
-                              fill
-                              unoptimized
-                              className="object-cover"
-                              sizes="120px"
-                            />
-                            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(45,29,33,0.02)_0%,rgba(45,29,33,0.46)_100%)]" />
-                            <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[0.58rem] font-semibold uppercase tracking-[0.18em] text-[#8f5f67]">
-                              {index + 1}
-                            </span>
-                          </button>
+                          const tileContent = (
+                            <>
+                              <Image
+                                src={slideImage}
+                                alt={slideTitle}
+                                fill
+                                unoptimized
+                                className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                sizes="(min-width: 1024px) 16rem, 50vw"
+                              />
+                              <div
+                                className={`absolute inset-0 ${
+                                  isFeaturedTile
+                                    ? "bg-[linear-gradient(180deg,rgba(45,29,33,0.02)_0%,rgba(45,29,33,0.16)_44%,rgba(45,29,33,0.62)_100%)]"
+                                    : "bg-[linear-gradient(180deg,rgba(45,29,33,0.02)_0%,rgba(45,29,33,0.08)_45%,rgba(45,29,33,0.32)_100%)]"
+                                }`}
+                              />
+                              <div className="absolute left-3 top-3">
+                                <span className="rounded-full bg-white/92 px-3 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.2em] text-[#8f5f67]">
+                                  {slide.tag?.trim() || "New post"}
+                                </span>
+                              </div>
+                              {isFeaturedTile ? (
+                                <div className="absolute inset-x-3 bottom-3 rounded-[1.15rem] border border-white/30 bg-white/16 p-3 text-white backdrop-blur-md">
+                                  <p className="font-display text-lg leading-none">
+                                    {slideTitle}
+                                  </p>
+                                </div>
+                              ) : null}
+                            </>
+                          );
+
+                          return slideUrl ? (
+                            <a
+                              key={`${slide.id ?? slideImage}-${index}`}
+                              href={slideUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`group relative min-h-[8.5rem] overflow-hidden rounded-[1.45rem] ${tileClassName}`}
+                            >
+                              {tileContent}
+                            </a>
+                          ) : (
+                            <div
+                              key={`${slide.id ?? slideImage}-${index}`}
+                              className={`group relative min-h-[8.5rem] overflow-hidden rounded-[1.45rem] ${tileClassName}`}
+                            >
+                              {tileContent}
+                            </div>
                           );
                         })}
                       </div>
                     </div>
-                  </div>
-                </div>
 
-                <div
-                  data-hero-card
-                  data-float="medium"
-                  className="absolute -left-4 top-28 rounded-[1.35rem] border border-white/70 bg-white/88 px-4 py-4 text-[#51434a] shadow-[0_24px_56px_-34px_rgba(45,29,33,0.42)] backdrop-blur"
-                >
-                  <p className="text-sm font-semibold">Shopper reactions</p>
-                  <p className="mt-2 text-lg">😍 💖 ✨ 🫶</p>
-                  <p className="mt-2 inline-flex rounded-full bg-[#2d1d21] px-3 py-1 text-xs font-semibold text-white">
-                    Love these finds
-                  </p>
-                </div>
-
-                <div
-                  data-hero-card
-                  data-float="slow"
-                  className="absolute bottom-6 left-6 flex items-center gap-2 rounded-full border border-white/70 bg-white/90 px-3 py-2 shadow-[0_18px_42px_-26px_rgba(45,29,33,0.35)] backdrop-blur"
-                >
-                  {slides.slice(0, 3).map((slide, index) => {
-                    const slideImage =
-                      slide.image ||
-                      fallbackContent.slides[index]?.image ||
-                      brandLogo;
-
-                    return (
-                    <div
-                      key={`${slideImage}-avatar`}
-                      className={`relative h-10 w-10 overflow-hidden rounded-full border-2 border-white ${
-                        index > 0 ? "-ml-3" : ""
-                      }`}
-                    >
-                      <Image
-                        src={slideImage}
-                        alt={slide.title}
-                        fill
-                        unoptimized
-                        className="object-cover"
-                        sizes="40px"
-                      />
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8a6a71]">
+                        Tap a tile to open its post link
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                      {slidePages.map((page, index) => (
+                        <button
+                          key={`page-${index}`}
+                          type="button"
+                          onClick={() => setCurrentBatch(index)}
+                          className={`inline-flex min-h-10 items-center justify-center rounded-full px-3.5 text-[0.82rem] font-semibold transition ${
+                            safeCurrentBatch === index
+                              ? "bg-[#2d1d21] text-white shadow-[0_16px_34px_-22px_rgba(45,29,33,0.48)]"
+                              : "border border-[#ead0d3] bg-white text-[#5b4549] hover:border-[#c68b97] hover:text-[#2d1d21]"
+                          }`}
+                          aria-label={`Show product batch ${index + 1}`}
+                        >
+                          {String(index + 1).padStart(2, "0")}
+                        </button>
+                      ))}
+                      </div>
                     </div>
-                    );
-                  })}
-                  <span className="pl-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#7b6468]">
-                    New favorites
-                  </span>
-                </div>
-
-                <div
-                  data-hero-card
-                  className="absolute bottom-10 right-4 rounded-[1.45rem] border border-white/70 bg-[#2d1d21] px-4 py-4 text-white shadow-[0_24px_60px_-34px_rgba(45,29,33,0.62)]"
-                >
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#f2c6cf]">
-                    Bundle deal
-                  </p>
-                  <p className="mt-2 font-display text-3xl leading-none">
-                    3 for less
-                  </p>
-                  <p className="mt-2 text-sm text-white/78">
-                    Cute picks that still fit the budget.
-                  </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -459,30 +491,24 @@ export default function HomeClient() {
 
       <Section
         id="features"
-        eyebrow="Why shop with us"
-        title="Small-business warmth with a real fashion-brand feel."
-        text="The layout gives shoppers clear reasons to trust the shop, browse more, and tap through to Facebook."
+        eyebrow="Product lineup"
+        title="A continuous stream of products right below the hero."
+        text="Instead of feature cards here, shoppers immediately see a flowing list of available pieces, so the page feels more alive and product-first."
       >
-        <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {content.features.map((item) => {
-            const Icon = featureIcons[item.icon];
-
-            return (
-              <article
-                key={item.title}
-                data-animate="card"
-                className="group rounded-[2rem] border border-white/75 bg-white/75 p-6 shadow-[0_24px_70px_-42px_rgba(124,76,88,0.46)] backdrop-blur transition-transform duration-300 hover:-translate-y-1.5"
-              >
-                <div className="flex h-14 w-14 items-center justify-center rounded-[1.25rem] bg-[linear-gradient(145deg,#fff2ed_0%,#f8d9df_100%)] text-[#8f5f67] shadow-lg">
-                  <Icon className="h-6 w-6" />
-                </div>
-                <h3 className="mt-5 text-xl font-semibold text-[#2d1d21]">
-                  {item.title}
-                </h3>
-                <p className="mt-3 text-sm leading-7 text-[#625054]">{item.text}</p>
-              </article>
-            );
-          })}
+        <div className="mt-8 space-y-4">
+          <ProductMarquee
+            slides={activeSlides}
+            brandLogo={brandLogo}
+            fallbackSlides={fallbackContent.slides}
+            fallbackLink={content.links.facebookUrl}
+          />
+          <ProductMarquee
+            slides={rotateSlides(activeSlides, Math.max(1, Math.floor(activeSlides.length / 2)))}
+            brandLogo={brandLogo}
+            fallbackSlides={fallbackContent.slides}
+            fallbackLink={content.links.facebookUrl}
+            reverse
+          />
         </div>
       </Section>
 
@@ -772,6 +798,115 @@ export default function HomeClient() {
   );
 }
 
+function chunkSlides(slides: SlideItem[], size: number) {
+  if (slides.length === 0) return [];
+
+  const pages: SlideItem[][] = [];
+
+  for (let index = 0; index < slides.length; index += size) {
+    pages.push(slides.slice(index, index + size));
+  }
+
+  return pages;
+}
+
+function rotateSlides(slides: SlideItem[], offset: number) {
+  if (slides.length === 0) return [];
+
+  const safeOffset = offset % slides.length;
+
+  return [...slides.slice(safeOffset), ...slides.slice(0, safeOffset)];
+}
+
+function ProductMarquee({
+  slides,
+  brandLogo,
+  fallbackSlides,
+  fallbackLink,
+  reverse,
+}: {
+  slides: SlideItem[];
+  brandLogo: string;
+  fallbackSlides: SlideItem[];
+  fallbackLink: string;
+  reverse?: boolean;
+}) {
+  const sourceSlides = slides.length > 0 ? slides : fallbackSlides;
+  const loopSlides = [...sourceSlides, ...sourceSlides];
+
+  return (
+    <div
+      data-animate="card"
+      className="overflow-hidden rounded-[2.35rem] border border-white/75 bg-white/72 p-4 shadow-[0_28px_85px_-46px_rgba(124,76,88,0.42)] backdrop-blur"
+    >
+      <div
+        className={`product-marquee-track ${reverse ? "product-marquee-track-reverse" : ""}`}
+      >
+        {loopSlides.map((slide, index) => {
+          const slideImage =
+            slide.image ||
+            fallbackSlides[index % fallbackSlides.length]?.image ||
+            brandLogo;
+          const slideTitle = slide.title.trim() || `Owner post ${index + 1}`;
+          const slideUrl = slide.url?.trim() || fallbackLink;
+
+          const card = (
+            <>
+              <div className="relative h-52 overflow-hidden rounded-[1.45rem]">
+                <Image
+                  src={slideImage}
+                  alt={slideTitle}
+                  fill
+                  unoptimized
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  sizes="240px"
+                />
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(45,29,33,0.04)_0%,rgba(45,29,33,0.1)_30%,rgba(45,29,33,0.55)_100%)]" />
+                <div className="absolute left-3 top-3 flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-white/92 px-3 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-[#8f5f67]">
+                    {slide.tag?.trim() || "New post"}
+                  </span>
+                  {slideUrl ? (
+                    <span className="rounded-full border border-white/35 bg-white/15 px-3 py-1 text-[0.56rem] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur">
+                      Link
+                    </span>
+                  ) : null}
+                </div>
+                <div className="absolute inset-x-3 bottom-3 rounded-[1.2rem] border border-white/30 bg-white/18 p-3 text-white backdrop-blur-md">
+                  <p className="font-display text-2xl leading-none">{slideTitle}</p>
+                </div>
+              </div>
+            </>
+          );
+
+          if (slideUrl) {
+            return (
+              <a
+                key={`${slide.id ?? slideImage}-${index}-${reverse ? "reverse" : "forward"}`}
+                href={slideUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group product-marquee-card"
+              >
+                {card}
+              </a>
+            );
+          }
+
+          return (
+            <div
+              key={`${slide.id ?? slideImage}-${index}-${reverse ? "reverse" : "forward"}`}
+              className="group product-marquee-card"
+            >
+              {card}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function Section({
   id,
   eyebrow,
@@ -876,22 +1011,6 @@ function ShopIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-function SparklesIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      {...props}
-    >
-      <path d="m12 3 1.7 4.3L18 9l-4.3 1.7L12 15l-1.7-4.3L6 9l4.3-1.7L12 3Z" />
-      <path d="m19 14 .9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9L19 14Z" />
-      <path d="m5 14 .9 2.1L8 17l-2.1.9L5 20l-.9-2.1L2 17l2.1-.9L5 14Z" />
-    </svg>
-  );
-}
-
 function ChatIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
@@ -905,41 +1024,6 @@ function ChatIcon(props: SVGProps<SVGSVGElement>) {
     >
       <path d="M5 18.5V20l2.8-1.4H12c4.4 0 8-2.9 8-6.8S16.4 5 12 5 4 7.9 4 11.8c0 2.5 1.4 4.7 3.6 5.9" />
       <path d="m12 10.1.7-.8a1.8 1.8 0 0 1 2.6 0c.8.8.8 2 0 2.8L12 15l-3.3-2.9a2 2 0 0 1 0-2.8 1.8 1.8 0 0 1 2.6 0l.7.8Z" />
-    </svg>
-  );
-}
-
-function StackIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="M12 3 4 7l8 4 8-4-8-4Z" />
-      <path d="M4 12l8 4 8-4" />
-      <path d="M4 17l8 4 8-4" />
-    </svg>
-  );
-}
-
-function TagIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="M10 3H5a2 2 0 0 0-2 2v5l10.6 10.6a2 2 0 0 0 2.8 0l4.2-4.2a2 2 0 0 0 0-2.8L10 3Z" />
-      <circle cx="7.5" cy="7.5" r="1.2" />
     </svg>
   );
 }
