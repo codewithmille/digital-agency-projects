@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fff8f4;
+  --foreground: #2d1d21;
+  --body-font:
+    "Aptos", "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --display-font:
+    "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--body-font);
+  --font-display: var(--display-font);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(242, 186, 195, 0.36), transparent 24%),
+    radial-gradient(circle at 88% 10%, rgba(255, 216, 202, 0.38), transparent 28%),
+    radial-gradient(circle at 18% 72%, rgba(249, 222, 208, 0.28), transparent 20%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0) 100%),
+    linear-gradient(180deg, #fffdfa 0%, #fff7f2 44%, #fff8f5 100%);
+  color: var(--foreground);
+  font-family: var(--body-font);
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: rgba(215, 134, 151, 0.28);
+  color: var(--foreground);
+}

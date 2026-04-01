@@ -1,0 +1,126 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f6f0e8;
+  --foreground: #152127;
+  --surface: rgba(255, 255, 255, 0.72);
+  --surface-strong: rgba(255, 255, 255, 0.92);
+  --line: rgba(21, 33, 39, 0.12);
+  --muted: #607178;
+  --copy: #44575d;
+  --teal-soft: #b6d7d4;
+  --teal: #5d8f91;
+  --teal-deep: #1e5157;
+  --gold: #b89a67;
+  --shadow: 0 24px 80px rgba(21, 33, 39, 0.08);
+  --font-display:
+    "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Baskerville,
+    Georgia, serif;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Consolas", "SFMono-Regular", Menlo, monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  background-image:
+    radial-gradient(circle at top left, rgba(182, 215, 212, 0.7), transparent 34%),
+    radial-gradient(circle at 88% 10%, rgba(184, 154, 103, 0.18), transparent 18%),
+    linear-gradient(180deg, #faf6f1 0%, #eef4f3 48%, #f8f2ea 100%);
+  background-attachment: fixed;
+}
+
+::selection {
+  background: rgba(93, 143, 145, 0.2);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+}
+
+a {
+  transition:
+    color 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.page-shell {
+  position: relative;
+  isolation: isolate;
+}
+
+.page-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.3;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.18) 1px, transparent 1px);
+  background-size: 120px 120px;
+  mask-image: linear-gradient(180deg, black 20%, transparent 100%);
+  z-index: -1;
+}
+
+.section-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+}
+
+.section-card-strong {
+  background: var(--surface-strong);
+  border: 1px solid rgba(21, 33, 39, 0.08);
+  box-shadow: var(--shadow);
+}
+
+.section-label {
+  color: var(--teal-deep);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.photo-panel {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.photo-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, rgba(21, 33, 39, 0.3) 100%);
+  z-index: -1;
+}
+
+.soft-ring {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.45),
+    0 16px 40px rgba(21, 33, 39, 0.08);
+}
+
+.text-balance {
+  text-wrap: balance;
+}
