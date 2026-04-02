@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 const facebookPageUrl =
   "https://www.facebook.com/profile.php?id=61576539856703&rdid=IcwVe9kv1TzufruC&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F18FhecL6Ap#";
@@ -96,7 +98,7 @@ function SectionHeading({
   description: string;
 }) {
   return (
-    <div className="max-w-2xl space-y-4">
+    <div data-animate="section-heading" className="max-w-2xl space-y-4">
       <p className="section-label">{eyebrow}</p>
       <h2 className="text-balance text-4xl leading-tight sm:text-5xl">{title}</h2>
       <p className="max-w-xl text-base leading-8 text-[var(--copy)] sm:text-lg">
@@ -107,6 +109,7 @@ function SectionHeading({
 }
 
 export default function Home() {
+  const rootRef = useRef<HTMLElement | null>(null);
   const [selectedUnit, setSelectedUnit] = useState(units[0].id);
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
@@ -115,6 +118,76 @@ export default function Home() {
   const [contact, setContact] = useState("");
   const [notes, setNotes] = useState("");
   const [copyStatus, setCopyStatus] = useState("");
+
+  useEffect(() => {
+    if (!rootRef.current) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    gsap.registerPlugin(ScrollTrigger);
+
+    const ctx = gsap.context(() => {
+      // Hero stagger
+      gsap.from(
+        "[data-hero-label], [data-hero-title], [data-hero-copy], [data-hero-actions], [data-hero-metrics]",
+        {
+          y: 40,
+          opacity: 0,
+          duration: 1,
+          ease: "power4.out",
+          stagger: 0.15,
+        }
+      );
+
+      gsap.from("[data-hero-panel]", {
+        x: 60,
+        opacity: 0,
+        scale: 0.95,
+        duration: 1.4,
+        ease: "power4.out",
+        delay: 0.3,
+      });
+
+      // Floating chips
+      gsap.to("[data-float='slow']", {
+        y: 18,
+        repeat: -1,
+        yoyo: true,
+        duration: 3.5,
+        ease: "sine.inOut",
+      });
+      gsap.to("[data-float='medium']", {
+        y: -15,
+        repeat: -1,
+        yoyo: true,
+        duration: 2.8,
+        ease: "sine.inOut",
+      });
+
+      // Sections
+      gsap.utils.toArray<HTMLElement>("[data-animate='section-heading']").forEach((el) => {
+        gsap.from(el, {
+          scrollTrigger: { trigger: el, start: "top 85%" },
+          y: 35,
+          opacity: 0,
+          duration: 1,
+          ease: "power3.out",
+        });
+      });
+
+      gsap.utils.toArray<HTMLElement>("[data-animate='card']").forEach((el, i) => {
+        gsap.from(el, {
+          scrollTrigger: { trigger: el, start: "top 92%" },
+          y: 30,
+          opacity: 0,
+          duration: 0.8,
+          ease: "power2.out",
+          delay: (i % 4) * 0.1,
+        });
+      });
+    }, rootRef);
+
+    return () => ctx.revert();
+  }, []);
 
   const unitName = units.find(u => u.id === selectedUnit)?.name || "Not specified";
 
@@ -145,7 +218,7 @@ export default function Home() {
   }
 
   return (
-    <main className="page-shell overflow-x-hidden">
+    <main ref={rootRef} className="page-shell overflow-x-hidden">
       <section className="relative px-6 pb-10 pt-6 sm:px-8 lg:px-10">
         <div className="mx-auto max-w-7xl">
           <header className="section-card mb-8 flex flex-col gap-4 rounded-[2rem] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
@@ -159,7 +232,7 @@ export default function Home() {
                 />
               </div>
               <div className="flex flex-col">
-                <p className="text-sm font-semibold uppercase tracking-[0.26em] text-[var(--muted)]">
+                <p data-hero-label className="text-sm font-semibold uppercase tracking-[0.26em] text-[var(--muted)]">
                   City Cove Staycation
                 </p>
                 <p className="text-sm text-[var(--copy)]">
@@ -168,29 +241,31 @@ export default function Home() {
               </div>
             </div>
 
+            <div data-hero-actions className="flex items-center gap-3">
             <a
               href="#inquire"
               className="inline-flex w-full items-center justify-center rounded-full border border-[var(--line)] bg-white/90 px-5 py-3 text-sm font-semibold text-[var(--foreground)] shadow-[0_12px_30px_rgba(21,33,39,0.07)] hover:-translate-y-0.5 hover:border-[var(--teal)] hover:text-[var(--teal-deep)] sm:w-auto"
             >
               Check Unit Availability
             </a>
+            </div>
           </header>
 
           <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14">
             <div className="space-y-8">
               <div className="space-y-5">
-                <p className="section-label">Prime MOA Location</p>
-                <h1 className="text-balance max-w-4xl text-[clamp(3.4rem,9vw,6.8rem)] leading-[0.95]">
+                <p data-hero-label className="section-label">Prime MOA Location</p>
+                <h1 data-hero-title className="text-balance max-w-4xl text-[clamp(3.4rem,9vw,6.8rem)] leading-[0.95]">
                   Experience a modern resort reset in Pasay.
                 </h1>
-                <p className="max-w-2xl text-lg leading-8 text-[var(--copy)] sm:text-xl">
+                <p data-hero-copy className="max-w-2xl text-lg leading-8 text-[var(--copy)] sm:text-xl">
                   Choose from four curated suites: **Sun**, **Moon**, **Ocean**, and **Sky**. 
                   Whether you need Twin beds at Shore 2 or a cozy family suite at Shore 3, 
                   your City Cove staycation is designed for comfort and convenience.
                 </p>
               </div>
 
-              <div className="flex flex-col gap-4 sm:flex-row">
+              <div data-hero-actions className="flex flex-col gap-4 sm:flex-row">
                 <a
                   href="#units"
                   className="inline-flex items-center justify-center rounded-full bg-[var(--teal-deep)] px-6 py-4 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(30,81,87,0.28)] hover:-translate-y-0.5 hover:bg-[var(--teal)]"
@@ -205,7 +280,7 @@ export default function Home() {
                 </a>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div data-hero-metrics className="grid gap-4 sm:grid-cols-2">
                 <div className="section-card rounded-[1.75rem] p-5">
                   <p className="text-sm uppercase tracking-[0.22em] text-[var(--muted)]">
                     Building Options
@@ -221,9 +296,9 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="relative">
-              <div className="absolute -left-8 top-8 h-36 w-36 rounded-full bg-[radial-gradient(circle,_rgba(184,154,103,0.28)_0%,_rgba(184,154,103,0)_72%)] blur-xl" />
-              <div className="absolute -right-8 bottom-6 h-40 w-40 rounded-full bg-[radial-gradient(circle,_rgba(93,143,145,0.24)_0%,_rgba(93,143,145,0)_74%)] blur-xl" />
+            <div data-hero-panel className="relative">
+              <div data-float="slow" className="absolute -left-8 top-8 h-36 w-36 rounded-full bg-[radial-gradient(circle,_rgba(184,154,103,0.28)_0%,_rgba(184,154,103,0)_72%)] blur-xl" />
+              <div data-float="medium" className="absolute -right-8 bottom-6 h-40 w-40 rounded-full bg-[radial-gradient(circle,_rgba(93,143,145,0.24)_0%,_rgba(93,143,145,0)_74%)] blur-xl" />
 
               <article
                 className="photo-panel soft-ring relative overflow-hidden rounded-[2.5rem] p-8 text-white shadow-2xl"
@@ -267,6 +342,7 @@ export default function Home() {
               {highlights.map((item) => (
                 <article
                   key={item.tag}
+                  data-animate="card"
                   className="rounded-[1.8rem] border border-white/60 bg-white/70 p-6 flex flex-col justify-between"
                 >
                   <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[var(--gold)]">
@@ -299,6 +375,7 @@ export default function Home() {
             {units.map((unit) => (
               <article
                 key={unit.id}
+                data-animate="card"
                 className="section-card group relative flex flex-col overflow-hidden rounded-[2.5rem] p-3 transition-all hover:shadow-xl"
               >
                 <div className="relative aspect-[4/3] overflow-hidden rounded-[2rem]">
@@ -364,7 +441,7 @@ export default function Home() {
 
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
             {amenityGroups.map((group) => (
-              <article key={group.title} className="section-card rounded-[2rem] p-7">
+              <article key={group.title} data-animate="card" className="section-card rounded-[2rem] p-7">
                 <p className="section-label mb-6">{group.title}</p>
                 <div className="space-y-3">
                   {group.items.map((item) => (
