@@ -77,6 +77,19 @@ function createSampleSlides() {
   }));
 }
 
+function collectSiteContentBlobs(content: SiteContent): string[] {
+  const blobs: string[] = [];
+  if (content.brand.logoPath.includes(".blob.vercel-storage.com")) {
+    blobs.push(content.brand.logoPath);
+  }
+  content.categories.forEach((cat) => {
+    if (cat.image.includes(".blob.vercel-storage.com")) {
+      blobs.push(cat.image);
+    }
+  });
+  return blobs;
+}
+
 export default function OwnerDashboard() {
   const [hydrated, setHydrated] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
@@ -291,6 +304,11 @@ export default function OwnerDashboard() {
   }
 
   function addSlide() {
+    if (content.slides.length >= 20) {
+      setStatus("Maximum of 20 posts allowed to avoid storage over-usage.");
+      return;
+    }
+
     setContent((current) => ({
       ...current,
       slides: [createEmptySlide(), ...current.slides],
@@ -303,11 +321,11 @@ export default function OwnerDashboard() {
   function loadSampleSlides() {
     setContent((current) => ({
       ...current,
-      slides: createSampleSlides(),
+      slides: createSampleSlides().slice(0, 20),
     }));
     setSelectedSlideIndex(0);
     setFocusedSection("slideshow");
-    setStatus("Sample posts loaded. Review them, then save.");
+    setStatus("Sample posts loaded (max 20). Review them, then save.");
   }
 
   function removeSlide(index: number) {
@@ -459,6 +477,22 @@ export default function OwnerDashboard() {
     setIsSaving(true);
 
     try {
+      // Cleanup site-content blobs (Logo, Categories)
+      const oldContent = loadSiteContent();
+      const oldBlobs = collectSiteContentBlobs(oldContent);
+      const newBlobs = new Set(collectSiteContentBlobs(content));
+      const orphanedBlobs = oldBlobs.filter((url) => !newBlobs.has(url));
+
+      if (orphanedBlobs.length > 0 && blobConfigured) {
+        void fetch("/api/owner/cleanup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ urls: orphanedBlobs }),
+        }).catch(() => {
+          // Silent cleanup failure is fine locally
+        });
+      }
+
       saveSiteContent(content);
 
       if (mongodbConfigured) {
@@ -828,6 +862,8 @@ export default function OwnerDashboard() {
                 value={content.brand.logoPath}
                 onChange={(value) => updateBrand("logoPath", value)}
                 suggestions={availableImageOptions}
+                uploadEndpoint="/api/owner/upload"
+                uploadEnabled={blobConfigured}
                 hint="Upload a new logo or keep using a public image path."
               />
               <TextField
@@ -952,9 +988,10 @@ export default function OwnerDashboard() {
                 <button
                   type="button"
                   onClick={addSlide}
-                  className="premium-button px-5 py-3"
+                  disabled={content.slides.length >= 20}
+                  className="premium-button px-5 py-3 disabled:opacity-50 disabled:translate-y-0"
                 >
-                  Add New Post
+                  {content.slides.length >= 20 ? "Limit Reached" : "Add New Post"}
                 </button>
               </div>
             </div>
@@ -967,7 +1004,14 @@ export default function OwnerDashboard() {
               <div className="glass-card border-dashed border-[#e2bec4] bg-transparent py-16 text-center">
                 <p className="text-lg font-medium text-[#5f4b4f]">No posts in your slideshow yet.</p>
                 <div className="mt-8 flex justify-center gap-4">
-                  <button type="button" onClick={addSlide} className="premium-button">Create First Post</button>
+                  <button
+                    type="button"
+                    onClick={addSlide}
+                    disabled={content.slides.length >= 20}
+                    className="premium-button disabled:opacity-50"
+                  >
+                    {content.slides.length >= 20 ? "Limit Reached" : "Create First Post"}
+                  </button>
                   <button type="button" onClick={loadSampleSlides} className="premium-button-outline">Load Examples</button>
                 </div>
               </div>
@@ -1335,7 +1379,9 @@ export default function OwnerDashboard() {
                         value={selectedCategory.image}
                         onChange={(value) => updateCategory(selectedCategoryIndex, "image", value)}
                         suggestions={availableImageOptions}
-                        hint="Choose a high-impact photo represent this collection."
+                        uploadEndpoint="/api/owner/upload"
+                        uploadEnabled={blobConfigured}
+                        hint="Choose a high-impact photo to represent this collection."
                       />
                     </div>
 

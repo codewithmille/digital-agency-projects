@@ -70,6 +70,7 @@ export async function replaceOwnerPosts(slides: SlideItem[]) {
   }
 
   const normalizedSlides = slides
+    .slice(0, 20)
     .map(normalizeSlide)
     .filter((slide) => slide.title || slide.tag || slide.image);
   const collection = await getCollection();
@@ -77,10 +78,9 @@ export async function replaceOwnerPosts(slides: SlideItem[]) {
   const incomingIds = new Set(
     slides.map((slide) => slide.id).filter((value): value is string => Boolean(value)),
   );
-  const removedImages = existing
-    .filter((document) => !incomingIds.has(document._id.toHexString()))
-    .map((document) => document.image)
-    .filter((image) => isVercelBlobUrl(image));
+  const existingImages = new Set(existing.map((doc) => doc.image).filter(isVercelBlobUrl));
+  const incomingImages = new Set(normalizedSlides.map((slide) => slide.image).filter(isVercelBlobUrl));
+  const removedImages = Array.from(existingImages).filter((image) => !incomingImages.has(image));
 
   await collection.deleteMany({});
 
