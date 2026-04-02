@@ -150,8 +150,13 @@ export default function Home() {
         <div className="mx-auto max-w-7xl">
           <header className="section-card mb-8 flex flex-col gap-4 rounded-[2rem] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
             <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--teal-deep)] text-sm font-semibold tracking-[0.24em] text-white">
-                CC
+              <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-[var(--line)]">
+                <Image
+                  src="/504490173_122111579342884661_8052139087146412847_n.jpg"
+                  alt="City Cove Logo"
+                  fill
+                  className="object-cover"
+                />
               </div>
               <div className="flex flex-col">
                 <p className="text-sm font-semibold uppercase tracking-[0.26em] text-[var(--muted)]">
@@ -522,9 +527,14 @@ export default function Home() {
           <div className="section-card flex flex-col gap-8 rounded-[2.5rem] px-8 py-10 sm:flex-row sm:items-center sm:justify-between lg:px-12">
             <div>
               <div className="flex items-center gap-4 mb-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--teal-deep)] text-xs font-bold tracking-widest text-white">
-                  CC
-                </div>
+              <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-[var(--line)]">
+                <Image
+                  src="/504490173_122111579342884661_8052139087146412847_n.jpg"
+                  alt="City Cove Logo"
+                  fill
+                  className="object-cover"
+                />
+              </div>
                 <h2 className="text-2xl font-bold">City Cove Staycation</h2>
               </div>
               <p className="max-w-md text-sm leading-relaxed text-[var(--copy)]">
